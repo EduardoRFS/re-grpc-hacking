@@ -1,0 +1,45 @@
+{
+  "name": "re-jwt",
+  "version": "0.0.0",
+  "description": "My Project",
+  "esy": {
+    "build": "dune build -p <PACKAGE_NAME>",
+    "buildDev": "pesy",
+    "release": {
+      "releasedBinaries": [
+        "ReJwtApp.exe"
+      ]
+    }
+  },
+  "buildDirs": {
+    "test": {
+      "require": ["re-jwt.lib"],
+      "main": "TestReJwt",
+      "name": "TestReJwt.exe"
+    },
+    "library": {
+      "name": "re-jwt.lib",
+      "namespace": "ReJwt"
+    },
+    "executable": {
+      "require": ["re-jwt.lib"],
+      "main": "ReJwtApp",
+      "name": "ReJwtApp.exe"
+    }
+  },
+  "scripts": {
+    "pesy": "bash -c 'env PESY_MODE=update pesy'",
+    "test": "esy x TestReJwt.exe"
+  },
+  "dependencies": {
+    "@opam/dune": ">=1.6.0",
+    "@esy-ocaml/reason": "*",
+    "ocaml": "^4.4.0"
+  },
+  "devDependencies": {
+    "ocaml": "4.7.1004",
+    "refmterr": "*",
+    "pesy": "*",
+    "@opam/merlin": "*"
+  }
+}
