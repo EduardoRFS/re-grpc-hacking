@@ -7,7 +7,7 @@ let client = () => {
   open GRPC.Client;
   let read_user =
     request(
-      "172.18.0.6",
+      "localhost",
       "/protos.UsersService/ReadUser",
       encode_read_user_request,
       decode_read_user_response,
