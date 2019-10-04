@@ -7,6 +7,6 @@
    (name GRPC)
    ; Other libraries list this name in their package.json 'require' field to use this library.
    (public_name grpc.lib)
-   (libraries  console.lib base stdio h2 h2-lwt-unix lwt_ssl lwt ocaml-protoc )
+   (libraries  console.lib base stdio h2 h2-lwt-unix lwt_ssl lwt ocaml-protoc-plugin.protobuf )
    (preprocess ( pps ppx_let ))  ; From package.json preprocess field
 )

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package protos;
+
+service UsersService {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc ReadUser(ReadUserRequest) returns (ReadUserResponse);
+}
+
+message CreateUserRequest {
+  string first_name = 1;
+  string last_name = 2;
+  int64 date_of_birth = 3;
+}
+message CreateUserResponse {
+  User user = 1;
+}
+
+message ReadUserRequest {
+  string id = 1;
+}
+message ReadUserResponse {
+  User user = 1;
+}
+
+message User {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  int64 date_of_birth = 4;
+}

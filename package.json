@@ -5,48 +5,78 @@
   "esy": {
     "build": "dune build -p <PACKAGE_NAME>",
     "buildDev": "pesy",
-    "release": { "releasedBinaries": [ "ReJwtApp.exe" ] }
+    "release": {
+      "releasedBinaries": [
+        "ReJwtApp.exe"
+      ]
+    }
   },
   "buildDirs": {
     "examples/client": {
-      "require": [ "grpc.lib", "grpc.protos" ],
-      "preprocess": [ "pps", "ppx_let" ],
+      "require": [
+        "grpc.lib",
+        "grpc.protos"
+      ],
+      "preprocess": [
+        "pps",
+        "ppx_let"
+      ],
       "main": "Client",
       "name": "Client.exe"
     },
     "examples/server": {
-      "require": [ "grpc.lib", "grpc.protos" ],
-      "preprocess": [ "pps", "ppx_let" ],
+      "require": [
+        "grpc.lib",
+        "grpc.protos"
+      ],
+      "preprocess": [
+        "pps",
+        "ppx_let"
+      ],
       "main": "Server",
       "name": "Server.exe"
     },
     "lib": {
       "require": [
-        "console.lib", "base", "stdio", "h2", "h2-lwt-unix", "lwt_ssl",
-        "lwt", "ocaml-protoc"
+        "console.lib",
+        "base",
+        "stdio",
+        "h2",
+        "h2-lwt-unix",
+        "lwt_ssl",
+        "lwt",
+        "ocaml-protoc-plugin.protobuf"
       ],
-      "preprocess": [ "pps", "ppx_let" ],
+      "preprocess": [
+        "pps",
+        "ppx_let"
+      ],
       "namespace": "GRPC",
       "name": "grpc.lib"
     },
     "protos": {
-      "require": [ "ocaml-protoc" ],
-      "preprocess": [ "pps", "ppx_let" ],
+      "require": [
+        "grpc.lib",
+        "ocaml-protoc-plugin.protobuf"
+      ],
       "namespace": "Protos",
       "name": "grpc.protos"
     }
   },
-  "scripts": { "pesy": "bash -c 'env PESY_MODE=update pesy'" },
+  "scripts": {
+    "pesy": "bash -c 'env PESY_MODE=update pesy'"
+  },
   "dependencies": {
     "@esy-ocaml/reason": "*",
     "@opam/base": "v0.12.2",
+    "@opam/conf-protoc": "0.9",
     "@opam/dune": ">=1.6.0",
-    "@opam/h2": "2.0.0",
-    "@opam/h2-lwt": "2.0.0",
-    "@opam/h2-lwt-unix": "2.0.0",
+    "@opam/h2": "*",
+    "@opam/h2-lwt": "*",
+    "@opam/h2-lwt-unix": "*",
     "@opam/lwt": "4.3.1",
     "@opam/lwt_ssl": "1.1.3",
-    "@opam/ocaml-protoc": "1.2.0",
+    "@opam/ocaml-protoc-plugin": "0.9",
     "@opam/ppx_let": "v0.12.0",
     "@reason-native/console": "^0.1.0",
     "grpcc": "^1.1.3",
@@ -59,10 +89,9 @@
     "@opam/merlin": "*"
   },
   "resolutions": {
-    "@opam/h2":
-      "EduardoRFS/ocaml-h2:h2.opam#7e4e51a001380e0152d1a9cb6e99b087a14b777d",
+    "@opam/ocaml-protoc-plugin": "link:/home/eduardo/workspace/ocaml-protoc-plugin/ocaml-protoc-plugin.opam",
+    "@opam/h2": "link:/home/eduardo/workspace/ocaml-h2/h2.opam",
     "@opam/h2-lwt": "link:/home/eduardo/workspace/ocaml-h2/h2-lwt.opam",
-    "@opam/h2-lwt-unix":
-      "link:/home/eduardo/workspace/ocaml-h2/h2-lwt-unix.opam"
+    "@opam/h2-lwt-unix": "link:/home/eduardo/workspace/ocaml-h2/h2-lwt-unix.opam"
   }
 }

@@ -12,49 +12,72 @@ let create_socket = (host, port) => {
 
   socket;
 };
+// TODO: default error_handler
+let error_handler = Console.log;
 
 // TODO: allow overwrite
-let headers =
-  Headers.add_list(
-    Headers.empty,
-    [
-      ("te", "trailers"),
-      ("content-type", "application/grpc"),
-      (
-        "user-agent",
-        "grpc-node/1.23.3 grpc-c/7.0.0 (linux; chttp2; gangnam)",
-      ),
-      ("grpc-accept-encoding", "identity,deflate,gzip"),
-      ("accept-encoding", "identity,gzip"),
-      (":authority", "localhost"),
-    ],
-  );
+let create_headers = host =>
+  Headers.of_list([
+    (":authority", host),
+    ("te", "trailers"),
+    // TODO: timeout
+    // ("grpc-timeout", ""),
+    ("content-type", "application/grpc+proto"),
+    ("grpc-encoding", "identity"),
+    ("grpc-accept-encoding", "identity"),
+    // TODO: user-agent
+    ("user-agent", "grpc-ocaml/0.0.0"),
+  ]);
 
-let h2_request = (~port=443, host, path, data) => {
-  let error_handler = a => Console.log(a);
-  let response_handler = (notify_response_received, _, response_body) => {
+type t = {
+  host: string,
+  scheme: string,
+  connection: Client.t,
+};
+let create = (~scheme="http", ~port=50051, host) => {
+  let%bind socket = create_socket(host, port);
+  let%map connection = Client.create_connection(~error_handler, socket);
+  {host, scheme, connection};
+};
+let h2_request = (client, path, data) => {
+  let (response_received, notify_response_received) = Lwt.wait();
+
+  let response_handler = (_, response_body) => {
     let _ =
-      Utils.body_to_bytes(response_body)
+      Utils.body_to_string(response_body)
       >|= Lwt.wakeup_later(notify_response_received);
     ();
   };
 
-  let (response_received, notify_response_received) = Lwt.wait();
-  let response_handler = response_handler(notify_response_received);
-
-  let%bind socket = create_socket(host, port);
-  let%bind connection = Client.create_connection(~error_handler, socket);
+  let headers = create_headers(client.host);
 
   let request = Request.create(`POST, ~scheme="https", path, ~headers);
   let request_body =
-    Client.request(connection, request, ~error_handler, ~response_handler);
+    Client.request(
+      client.connection,
+      request,
+      ~error_handler,
+      ~response_handler,
+    );
 
-  Body.write_string(request_body, Bytes.to_string(data));
+  Body.write_string(request_body, data);
   Body.close_writer(request_body);
   response_received;
 };
 
-let request = (~port=50051, host, path, encode_fn, decode_fn, request) =>
-  Utils.encode(encode_fn, request)
-  |> h2_request(~port, host, path)
-  >|= Utils.decode(decode_fn);
+let request =
+    (
+      type req,
+      type res,
+      path,
+      (
+        module Request: Types.Message with type t = req,
+        module Response: Types.Message with type t = res,
+      ),
+      client,
+      request,
+    ) =>
+  request
+  |> Utils.encode(Request.to_proto)
+  >>= h2_request(client, path)
+  >>= Utils.decode(Response.from_proto);

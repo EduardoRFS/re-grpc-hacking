@@ -2,56 +2,64 @@ open H2;
 open Base;
 open Lwt.Infix;
 
-type route_fn = bytes => Lwt.t(bytes);
+type route_fn = string => Lwt.t(string);
 type route = (string, route_fn);
 
-let route = (name, decode_fn, encode_fn, middleware) => {
+let route =
+    (
+      type req,
+      type res,
+      name,
+      (
+        module Request: Types.Message with type t = req,
+        module Response: Types.Message with type t = res,
+      ),
+      middleware,
+    ) => {
   let fn = bytes =>
-    Utils.decode(decode_fn, bytes) |> middleware >|= Utils.encode(encode_fn);
-
+    bytes
+    |> Utils.decode(Request.from_proto)
+    >>= middleware
+    >>= Utils.encode(Response.to_proto);
   (name, fn);
 };
 
 // TODO: allow overwrite
 let headers =
-  Headers.add_list(
-    Headers.empty,
-    [
-      ("content-type", "application/grpc"),
-      ("grpc-accept-encoding", "identity,deflate,gzip"),
-      ("accept-encoding", "identity,gzip"),
-      ("grpc-status", "0"),
-      ("grpc-message", "OK"),
-    ],
-  );
-let create_connection_handler = routes => {
-  let error_handler =
-      (_client_address, ~request as _=?, error, _start_response) =>
-    switch (error) {
-    | `Bad_request => Console.log("Bad Request")
-    | `Internal_server_error => Console.log("Internal_server_error")
-    | `Exn(exn) => Console.log(exn)
-    };
+  Headers.of_list([
+    ("grpc-encoding", "identity"),
+    ("grpc-accept-encoding", "identity"),
+    ("content-type", "application/grpc+proto"),
+  ]);
+let trailer_headers =
+  Headers.of_list([("grpc-status", "0"), ("grpc-message", "OK")]);
 
+// TODO: default error handler
+let error_handler = (_client_address, ~request as _=?, error, _start_response) =>
+  switch (error) {
+  | `Bad_request => Console.log("Bad Request")
+  | `Internal_server_error => Console.log("Internal_server_error")
+  | `Exn(exn) => Console.log(exn)
+  };
+
+let create_connection_handler = routes => {
   let request_handler = (_client_address, request_descriptor) => {
     let request = Reqd.request(request_descriptor);
-    let grpc_method =
-      List.nth_exn(String.split_on_chars(~on=['/'], request.target), 2);
 
     // TODO: verify method
-    switch (Map.find(routes, grpc_method)) {
+    switch (Map.find(routes, request.target)) {
     | Some(route) =>
       let _ = {
         let%map data =
           Reqd.request_body(request_descriptor)
-          |> Utils.body_to_bytes
+          |> Utils.body_to_string
           >>= route;
 
         let response = Response.create(~headers, `OK);
         let response_body =
           Reqd.respond_with_streaming(request_descriptor, response);
-        Body.write_string(response_body, Bytes.to_string(data));
-        Reqd.send_trailer_headers(request_descriptor, headers);
+        Body.write_string(response_body, data);
+        Reqd.send_trailer_headers(request_descriptor, trailer_headers);
         Body.close_writer(response_body);
       };
       ();

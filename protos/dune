@@ -7,6 +7,5 @@
    (name Protos)
    ; Other libraries list this name in their package.json 'require' field to use this library.
    (public_name grpc.protos)
-   (libraries  ocaml-protoc )
-   (preprocess ( pps ppx_let ))  ; From package.json preprocess field
+   (libraries  grpc.lib ocaml-protoc-plugin.protobuf )
 )

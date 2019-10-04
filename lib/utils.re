@@ -13,27 +13,18 @@ let find_address = (host, port) => {
   | None => Lwt.fail_with("Address not found")
   };
 };
-let body_to_bytes = body => {
+let body_to_string = body => {
   let (data_received, notify_data_received) = Lwt.wait();
-  let rec read_response = bytes =>
+  let rec read_response = string =>
     H2.Body.schedule_read(
       body,
-      ~on_eof=() => Lwt.wakeup_later(notify_data_received, bytes),
+      ~on_eof=() => Lwt.wakeup_later(notify_data_received, string),
       ~on_read=
         (bigstring, ~off, ~len) => {
-          let fragment = Bytes.create(len);
-          Bigstringaf.blit_to_bytes(
-            bigstring,
-            ~src_off=off,
-            fragment,
-            ~dst_off=0,
-            ~len,
-          );
-          // TODO: shouldn't use this
-          Caml.BytesLabels.cat(bytes, fragment) |> read_response;
+          string ++ Bigstringaf.to_string(bigstring) |> read_response
         },
     );
-  read_response(Bytes.create(0));
+  read_response("");
   data_received;
 };
 let create_header = body => {
@@ -47,21 +38,24 @@ let create_header = body => {
       }
     );
   // TODO: shouldn't use this
-  Caml.Bytes.cat(
-    Bytes.of_string("\x00"),
-    body |> Bytes.length |> int_to_bytes,
-  );
+  "\x00" ++ (body |> String.length |> int_to_bytes |> Bytes.to_string);
 };
-let remove_header = bytes =>
-  Bytes.sub(~pos=5, ~len=Bytes.length(bytes) - 5, bytes);
-let encode = (encode_fn, message) => {
-  let encoder = Pbrt.Encoder.create();
-  encode_fn(message, encoder);
 
-  let body = Pbrt.Encoder.to_bytes(encoder);
+let encode = (encode_fn, message) => {
+  let writer = encode_fn(message);
+
+  let body = Protobuf.Writer.contents(writer);
   let header = create_header(body);
 
-  Caml.Bytes.cat(header, body);
+  header ++ body |> Lwt.return;
 };
-let decode = (decode_fn, bytes) =>
-  remove_header(bytes) |> Pbrt.Decoder.of_bytes |> decode_fn;
+let decode = (decode_fn, bytes) => {
+  // header size
+  let offset = 5;
+  let length = String.length(bytes) - offset;
+  let reader = Protobuf.Reader.create(~offset, ~length, bytes);
+  switch (reader |> decode_fn) {
+  | Ok(message) => Lwt.return(message)
+  | Error(_) => Lwt.fail_with("An error happened at decode")
+  };
+};
